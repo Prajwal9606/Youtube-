@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">YT Short Clipper V2</string>
+    <string name="title_activity_main">YT Short Clipper V2</string>
+    <string name="package_name">com.ytshortclipper.studio</string>
+    <string name="custom_url_scheme">com.ytshortclipper.studio</string>
+</resources>
