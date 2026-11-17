@@ -1,0 +1,25 @@
+{
+  "name": "yt-short-clipper-v2-studio",
+  "version": "2.1.0",
+  "private": true,
+  "description": "All-in-One Online & Mobile Hybrid Studio - WebGPU Whisper, 9:16 GPU Canvas Renderer, YouTube GIS OAuth2 Uploader",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/share": "^6.0.3",
+    "@huggingface/transformers": "^3.3.3",
+    "mp4-muxer": "^5.2.0"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}
