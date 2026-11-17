@@ -1,0 +1,9 @@
+{
+	"appId": "com.ytshortclipper.studio",
+	"appName": "YT Short Clipper V2",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true
+	}
+}

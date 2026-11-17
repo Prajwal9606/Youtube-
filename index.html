@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>YT Short Clipper V2 - Online & Mobile Hybrid Studio</title>
+    
+    <!-- PWA & Mobile Web App Meta -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0f172a" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
+    
+    <!-- Google Identity Services for Client-Side YouTube OAuth2 -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body class="dark-theme">
+    <div id="app">
+      <!-- Top Navigation Bar -->
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-badge">⚡ 2.1</div>
+          <div class="brand-titles">
+            <h1>YT Short Clipper</h1>
+            <span class="sub-brand">All-in-One Studio</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div id="engine-status-pill" class="status-pill status-ready">
+            <span class="status-dot"></span>
+            <span id="engine-status-text">WebGPU Whisper</span>
+          </div>
+          <button id="btn-open-settings" class="btn-icon" title="Settings">⚙️</button>
+        </div>
+      </header>
+
+      <!-- Main Studio Viewport -->
+      <main class="studio-container">
+        <!-- Media Source Selection / Import Area -->
+        <section class="media-input-card">
+          <div class="tab-group">
+            <button class="tab-btn active" data-tab="upload-file">📁 Select Video</button>
+            <button class="tab-btn" data-tab="yt-url">🔗 YouTube Link</button>
+          </div>
+
+          <div id="tab-upload-file" class="tab-pane active">
+            <label class="dropzone" id="file-dropzone">
+              <input type="file" id="video-file-input" accept="video/*" />
+              <div class="dropzone-content">
+                <span class="dropzone-icon">🎬</span>
+                <span class="dropzone-title">Pick video from phone or PC</span>
+                <span class="dropzone-sub">MP4, MOV, WEBM (No size limit)</span>
+              </div>
+            </label>
+          </div>
+
+          <div id="tab-yt-url" class="tab-pane">
+            <div class="url-input-group">
+              <input type="url" id="yt-url-input" placeholder="Paste YouTube / Shorts URL here..." />
+              <button id="btn-fetch-yt" class="btn btn-secondary">Fetch Clip</button>
+            </div>
+            <p class="field-hint">Requires companion Python server (Android Termux or Google Colab)</p>
+          </div>
+        </section>
+
+        <!-- 9:16 Video Editor & Real-Time Canvas Preview -->
+        <section class="editor-section" id="editor-section" style="display: none;">
+          <div class="canvas-wrapper">
+            <canvas id="preview-canvas" width="1080" height="1920"></canvas>
+            <div id="render-overlay" class="render-overlay" style="display: none;">
+              <div class="spinner"></div>
+              <div class="render-info">
+                <h4 id="render-status-title">Processing...</h4>
+                <div class="progress-bar-container">
+                  <div class="progress-bar-fill" id="render-progress-bar" style="width: 0%;"></div>
+                </div>
+                <span id="render-progress-text">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Controls & Scrubber -->
+          <div class="player-controls">
+            <button id="btn-play-pause" class="btn-icon-lg">▶</button>
+            <input type="range" id="timeline-scrubber" min="0" max="100" value="0" step="0.1" />
+            <span id="time-display" class="time-label">0:00 / 0:00</span>
+          </div>
+
+          <!-- Layout & Styling Switchers -->
+          <div class="controls-panel">
+            <div class="control-row">
+              <span class="control-label">Aspect Layout:</span>
+              <div class="pill-group" id="layout-pill-group">
+                <button class="pill-btn active" data-layout="crop">Crop 9:16</button>
+                <button class="pill-btn" data-layout="blur">Blurred BG</button>
+                <button class="pill-btn" data-layout="split">Split / B-Roll</button>
+              </div>
+            </div>
+
+            <div class="control-row">
+              <span class="control-label">Caption Style:</span>
+              <div class="pill-group" id="style-pill-group">
+                <button class="pill-btn active" data-style="mrbeast">MrBeast Punch</button>
+                <button class="pill-btn" data-style="neon">Neon Glow</button>
+                <button class="pill-btn" data-style="karaoke">Karaoke</button>
+                <button class="pill-btn" data-style="clean">Minimal</button>
+              </div>
+            </div>
+
+            <!-- AI Whisper Actions -->
+            <div class="action-card-ai">
+              <div class="ai-header">
+                <span class="ai-title">🤖 Keyless Whisper AI Captions</span>
+                <span class="ai-badge" id="ai-engine-badge">WebGPU/IndexedDB</span>
+              </div>
+              <p class="ai-desc">Generates word-level timestamps on-device with zero external API keys.</p>
+              <button id="btn-transcribe" class="btn btn-ai">
+                ⚡ Auto-Generate Vertical Captions
+              </button>
+            </div>
+
+            <!-- Subtitle Quick Editor -->
+            <div class="caption-editor-card" id="caption-editor-card">
+              <div class="caption-header">
+                <span>📝 Generated Captions (<span id="words-count">0</span> words)</span>
+                <button id="btn-clear-captions" class="btn-text-sm">Clear</button>
+              </div>
+              <div id="captions-list" class="captions-list">
+                <div class="empty-captions-placeholder">
+                  Click "Auto-Generate Vertical Captions" above to transcribe speech with on-device Whisper AI.
+                </div>
+              </div>
+            </div>
+
+            <!-- Primary Action Buttons -->
+            <div class="main-action-buttons">
+              <button id="btn-render-gpu" class="btn btn-primary btn-lg">
+                ⚡ Render with Device GPU (MP4)
+              </button>
+              
+              <div class="secondary-btn-group">
+                <button id="btn-share-native" class="btn btn-secondary" disabled>
+                  📲 Save / Share
+                </button>
+                <button id="btn-upload-yt" class="btn btn-youtube" disabled>
+                  ▶ Upload to YouTube
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Studio Settings</h3>
+            <button class="btn-icon" id="settings-close-btn">&times;</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Engine Selection -->
+            <div class="form-group">
+              <label class="form-label">Speech AI Transcription Engine:</label>
+              <select id="setting-ai-engine" class="form-select">
+                <option value="webgpu">In-Browser WebGPU/WASM Whisper (Zero-Config, On-Device)</option>
+                <option value="python">Local/Remote Python Server (Termux / Colab)</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="python-url-group" style="display: none;">
+              <label class="form-label">Python Server Base URL:</label>
+              <input type="url" id="setting-python-url" class="form-input" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+              <span class="field-hint">Termux on Android uses <code>http://127.0.0.1:8000</code>. Free Colab uses ngrok/localtunnel URL.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Whisper Model:</label>
+              <select id="setting-whisper-model" class="form-select">
+                <option value="onnx-community/whisper-tiny" selected>Whisper Tiny (~40MB Quantized - Ultra Fast)</option>
+                <option value="onnx-community/whisper-base">Whisper Base (~75MB Quantized - High Accuracy)</option>
+              </select>
+              <span class="field-hint">Cached automatically in IndexedDB on first download.</span>
+            </div>
+
+            <!-- YouTube OAuth Section -->
+            <hr class="divider" />
+            <div class="form-group">
+              <div class="label-with-action">
+                <label class="form-label">Google OAuth 2.0 Client ID (YouTube Upload):</label>
+                <button id="btn-open-guide-link" class="btn-link">📱 Setup Guide</button>
+              </div>
+              <input type="text" id="setting-google-client-id" class="form-input" placeholder="e.g. 123456789-xxxx.apps.googleusercontent.com" />
+              <span class="field-hint">Required for direct YouTube upload. 100% client-side (no client_secret required).</span>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="settings-cancel-btn">Cancel</button>
+            <button class="btn btn-primary" id="settings-save-btn">Save Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- YouTube Upload Modal -->
+      <div id="youtube-upload-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+          <div class="modal-header">
+            <div class="modal-title-group">
+              <span class="badge-red">YouTube Data API v3</span>
+              <h3>Upload Short to YouTube</h3>
+            </div>
+            <button class="btn-icon" id="yt-modal-close-btn">&times;</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Video Title:</label>
+              <input type="text" id="yt-title-input" class="form-input" value="Amazing Moment #Shorts" maxlength="100" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description:</label>
+              <textarea id="yt-desc-input" class="form-textarea" rows="3">Created with YT Short Clipper V2 🚀
+#Shorts #Viral #Trending</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tags (comma-separated):</label>
+              <input type="text" id="yt-tags-input" class="form-input" value="Shorts, Viral, Trending" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Privacy Status:</label>
+              <select id="yt-privacy-select" class="form-select">
+                <option value="public" selected>Public (Immediate Live)</option>
+                <option value="unlisted">Unlisted (Shareable Link)</option>
+                <option value="private">Private (Only You)</option>
+              </select>
+            </div>
+
+            <!-- Upload progress bar -->
+            <div id="yt-upload-progress-card" class="upload-progress-card" style="display: none;">
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="yt-progress-fill" style="width: 0%;"></div>
+              </div>
+              <span id="yt-progress-text">Starting upload...</span>
+            </div>
+
+            <div id="yt-upload-result-card" class="result-card success" style="display: none;">
+              <h4>🎉 Video Successfully Uploaded!</h4>
+              <p>Your Short is live on your channel:</p>
+              <a id="yt-video-link" href="#" target="_blank" class="link-highlight">Open YouTube Short &rarr;</a>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="yt-cancel-btn">Close</button>
+            <button class="btn btn-youtube" id="yt-confirm-upload-btn">▶ Start Resumable Upload</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guide Modal Container -->
+      <div id="guide-modal-container"></div>
+
+      <!-- Hidden Source Video Element for Processing -->
+      <video id="hidden-video" style="display: none;" playsinline webkit-playsinline></video>
+    </div>
+
+    <!-- Main JS Application Entry -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
